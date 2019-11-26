@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:drawable="@drawable/hotel_seaside" android:duration="10000"/>
+    <item android:drawable="@drawable/hotel_pool" android:duration="10000"/>
+    <item android:drawable="@drawable/hotel_multi" android:duration="10000"/>
+    <item android:drawable="@drawable/hotel_garden" android:duration="10000"/>
+</animation-list>
