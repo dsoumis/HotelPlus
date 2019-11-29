@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.AnimationDrawable;
 import android.os.Bundle;
@@ -19,120 +20,191 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 public class MainActivity extends AppCompatActivity {
+
+    private boolean createStoredHotelsFile(String jsonString){
+        try {
+            //Open a private file associated with this Context's application package for reading.
+            //Context.MODE_PRIVATE : The created file can only be accessed by this app or apps with same user id
+            FileOutputStream fos = openFileOutput("stored_hotels",Context.MODE_PRIVATE);
+            if (jsonString != null) {
+                fos.write(jsonString.getBytes());
+            }
+            fos.close();
+            return true;
+        }catch (IOException ioException) {
+            return false;
+        }
+
+    }
+    private boolean isStoredHotelsFilePresent() {
+        //path to internal storage of app files
+        String path = getFilesDir().getAbsolutePath() + "/stored_hotels";
+        File file = new File(path);
+        return file.exists();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Network calls should be done with threads or with a class which extends Async
-//        Thread thread = new Thread(){
-//            public void run(){
-//                String queryStr = "PREFIX rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#>\r\n" +
-//                        "PREFIX dbo:<http://dbpedia.org/ontology/>\r\n" +
-//                        "PREFIX geo:<http://www.w3.org/2003/01/geo/wgs84_pos#>\r\n" +
-//                        "PREFIX rdfs:<http://www.w3.org/2000/01/rdf-schema#>\r\n" +
-//                        "select ?hotel ?label ?geo\r\n" +
-//                        "where {\r\n" +
-//                        "?hotel rdf:type dbo:Hotel .\r\n" +
-//                        "?hotel geo:geometry ?geo .\r\n" +
-//                        "FILTER (<bif:st_intersects> (?geo, <bif:st_point> (23.727539, 37.983810), 100)) .\r\n" +
-//                        "?hotel rdfs:label ?label .\r\n" +
-//                        //"BIND(\"Athens\" AS ?area) .\n" +
-//                        "}";
-//                Query query = QueryFactory.create(queryStr,Syntax.syntaxARQ); //Create a SPARQL query from the given string.
-//
-//                QueryExecution qexec;
-//                // Remote execution.
-//                try{
-//                    //Create a QueryExecution that will access a SPARQL service over HTTP
-//                    String service = "http://dbpedia.org/sparql";
-//                    qexec = QueryExecutionFactory.sparqlService(service, query);
-//                    // Set the DBpedia specific timeout.
-//                    //((QueryEngineHTTP)qexec).addParam("timeout", "30000") ; //Cast to QueryEngineHTTP to add addParam
-//
-//                    // Execute.
-//                    //ResultSet:{
-//                    //Results from a query in a table-like manner for SELECT queries.
-//                    // Each row corresponds to a set of bindings which fulfil the conditions of the query.
-//                    // Access to the results is by variable name.
-//                    ResultSet rs = qexec.execSelect(); //Type of Select (could be CONSTRUCT,ASK..)}
-//                    while (rs.hasNext()){
-//                        QuerySolution s=rs.nextSolution();
-//                        Log.d("POUTSA",s.getResource("?hotel").toString());
-//                    }
-//                    ResultSetFormatter.out(rs);
-//                    qexec.close();
-//                } catch (Exception e) {
-//                    Log.d("POUTSA","Message of fault: "+Log.getStackTraceString(e));
-//                    //e.printStackTrace();
-//                }
-//            }
-//        };
+        //Our database where the regions with hotels are saved
+        final DatabaseHandler db = new DatabaseHandler(this);
 
-        //thread.start();
+        Hotels_per_Region temp = db.getHotelsOfRegion(37.983810,23.727539);//Athens
+        Log.d("Hotel",temp.getHotels());
+
+        if(!isStoredHotelsFilePresent()){
+            Log.d("POUTSAA","File is not! here!");
+            createStoredHotelsFile("{}");
+        }else{
+            Log.d("POUTSAA","File is here!");
+        }
+
+
 
         OkHttpClient client = new OkHttpClient();
-        String urlStr = "http://dbpedia.org/sparql/?default-graph-uri=http://dbpedia.org&" +
-                "query=select+?area+?hotel+?label+?geo+" +
-                //Note to me. %23=#. Char # won't work.
-                "where+{+?hotel+<http://www.w3.org/1999/02/22-rdf-syntax-ns%23type>+<http://dbpedia.org/ontology/Hotel>+.+" +
-                "?hotel+<http://www.w3.org/2003/01/geo/wgs84_pos%23geometry>+?geo+.+" +
-                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(23.727539,+37.983810),+100))+.+" +
-                "?hotel+<http://www.w3.org/2000/01/rdf-schema%23label>+?label+.+" +
-                //Note to me. %2B=+. Char + won't work.
-                "BIND(\"Athens\"+AS+?area)+.+}";
-        Request request = new Request.Builder().url(urlStr).addHeader("Accept", "application/sparql-results+json").build();
+        client = client.newBuilder().retryOnConnectionFailure(true).readTimeout(15,TimeUnit.SECONDS).writeTimeout(15,TimeUnit.SECONDS).
+                callTimeout(15,TimeUnit.SECONDS).build();
+
+
+        String Greece_bbox = "34.9199876979,20.1500159034,41.8269046087,26.6041955909";
+
+
+        String urlStr = "http://overpass-api.de/api/interpreter?data=[out:json];(node[tourism=hotel] (" +Greece_bbox+
+                "););out body;";
+
+        String[] tokens = Greece_bbox.split(",");
+        final double min_lat=Double.parseDouble(tokens[0]);
+        final double min_lng=Double.parseDouble(tokens[1]);
+        final double max_lat=Double.parseDouble(tokens[2]);
+        final double max_lng=Double.parseDouble(tokens[3]);
+        Log.d("BBOX","Message : "+min_lat+" "+min_lng+" "+max_lat+" "+max_lng);
+
+
+
+        Request request = new Request.Builder().url(urlStr).build();
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                Log.d("POUTSA","Message of fault: "+Log.getStackTraceString(e));
+                Log.d("Network_error","Message of fault: "+Log.getStackTraceString(e));
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 if(response.isSuccessful()){
                     String result = response.body().string();
-                    Log.d("POUTSA","Ti[pta "+result);
-
+                    Log.d("PiTSA","Ti[pta "+result);
+                    if(!db.regionExists(min_lat,min_lng,max_lat,max_lng)) {
+                        Log.d("Here", "mpainei");
+                        db.addRegionWithHotels(new Hotels_per_Region(min_lat, min_lng, max_lat, max_lng, result));
+                    }
+                    else{
+                        Log.d("Here","already");
+                    }
                     try{
+
                         JSONObject jsonResult = new JSONObject(result);
-                        JSONArray results = jsonResult.getJSONObject("results").getJSONArray("bindings");
-
-                        for(int i=0; i<results.length(); ++i){
-                            JSONObject innerObject = results.getJSONObject(i);
-                            Log.d("POUTSA","EDW "+innerObject.getJSONObject("hotel").getString("value"));
-                            for(Iterator it = innerObject.keys(); it.hasNext(); ) {
-
-                                String key = (String)it.next();
-                                Log.d("POUTSA",key + ":" + innerObject.get(key));
-                            }
-                        }
-
-
-
+                        JSONArray results = jsonResult.getJSONArray("elements");
+                        Log.d("PoTSA", String.valueOf(results.length()));
+//                        for(int i=0; i<results.length(); ++i){
+//                            JSONObject innerObject = results.getJSONObject(i);
+//                            if(innerObject.getJSONObject("tags").has("name"))
+//                                Log.d("PoTSA","EDW "+innerObject.getJSONObject("tags").getString("name") + i);
+//                            for(Iterator it = innerObject.keys(); it.hasNext(); ) {
+//
+//                                String key = (String)it.next();
+//                                Log.d("PloTSA",key + ":" + innerObject.get(key));
+//                            }
+//                        }
 
 
 
-                        Map hotel_value = ((Map)jsonResult.get("hotel"));
-                        // iterating hotel_value Map
-                        Iterator<Map.Entry> itr1 = hotel_value.entrySet().iterator();
-                        while (itr1.hasNext()) {
-                            Map.Entry pair = itr1.next();
-                            Log.d("POUTSA",pair.getKey() + " : " + pair.getValue());
-                        }
+
+
+
+//                        Map hotel_value = ((Map)jsonResult.get("hotel"));
+//                        // iterating hotel_value Map
+//                        Iterator<Map.Entry> itr1 = hotel_value.entrySet().iterator();
+//                        while (itr1.hasNext()) {
+//                            Map.Entry pair = itr1.next();
+//                            Log.d("POUTSA",pair.getKey() + " : " + pair.getValue());
+//                        }
                     }catch (JSONException e){
                         Log.d("JSON ERROR","Message of fault: "+Log.getStackTraceString(e));
                     }
                 }
             }
         });
+
+
+//        urlStr = "http://dbpedia.org/sparql/?default-graph-uri=http://dbpedia.org&" +
+//                "query=select+?area+?hotel+?label+?geo+" +
+//                //Note to me. %23=#. Char # won't work.
+//                "where+{+?hotel+<http://www.w3.org/1999/02/22-rdf-syntax-ns%23type>+<http://dbpedia.org/ontology/Hotel>+.+" +
+//                "?hotel+<http://www.w3.org/2003/01/geo/wgs84_pos%23geometry>+?geo+.+" +
+//                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(23.727539,+37.983810),+100))+.+" +
+//                "?hotel+<http://www.w3.org/2000/01/rdf-schema%23label>+?label+.+" +
+//                //Note to me. %2B=+. Char + won't work.
+//                "BIND(\"Athens\"+AS+?area)+.+}";
+//        request = new Request.Builder().url(urlStr).addHeader("Accept", "application/sparql-results+json").build();
+//        client.newCall(request).enqueue(new Callback() {
+//            @Override
+//            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+//                Log.d("POUTSA","Message of fault: "+Log.getStackTraceString(e));
+//            }
+//
+//            @Override
+//            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+//                if(response.isSuccessful()){
+//                    String result = response.body().string();
+//                    Log.d("PuTSA","Ti[pta "+result);
+//
+//                    try{
+//                        JSONObject jsonResult = new JSONObject(result);
+//                        JSONArray results = jsonResult.getJSONObject("results").getJSONArray("bindings");
+//
+//                        for(int i=0; i<results.length(); ++i){
+//                            JSONObject innerObject = results.getJSONObject(i);
+//                            Log.d("POUTSA","EDW "+innerObject.getJSONObject("hotel").getString("value"));
+//                            for(Iterator it = innerObject.keys(); it.hasNext(); ) {
+//
+//                                String key = (String)it.next();
+//                                Log.d("POUTSA",key + ":" + innerObject.get(key));
+//                            }
+//                        }
+//
+//
+//
+//
+//
+//
+//                        Map hotel_value = ((Map)jsonResult.get("hotel"));
+//                        // iterating hotel_value Map
+//                        Iterator<Map.Entry> itr1 = hotel_value.entrySet().iterator();
+//                        while (itr1.hasNext()) {
+//                            Map.Entry pair = itr1.next();
+//                            Log.d("POUTSA",pair.getKey() + " : " + pair.getValue());
+//                        }
+//                    }catch (JSONException e){
+//                        Log.d("JSON ERROR","Message of fault: "+Log.getStackTraceString(e));
+//                    }
+//                }
+//            }
+//        });
+
+
 
 
         new Handler().postDelayed(new Runnable() {
