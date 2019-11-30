@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">HotelPlus</string>
+    <string name="hint">Area to search..</string>
+    <string name="search">SEARCH</string>
     <string name="hotel_plus_icon_description">Hotel Plus Icon</string>
 </resources>

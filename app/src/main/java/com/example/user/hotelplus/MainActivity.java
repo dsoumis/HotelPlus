@@ -32,28 +32,6 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private boolean createStoredHotelsFile(String jsonString){
-        try {
-            //Open a private file associated with this Context's application package for reading.
-            //Context.MODE_PRIVATE : The created file can only be accessed by this app or apps with same user id
-            FileOutputStream fos = openFileOutput("stored_hotels",Context.MODE_PRIVATE);
-            if (jsonString != null) {
-                fos.write(jsonString.getBytes());
-            }
-            fos.close();
-            return true;
-        }catch (IOException ioException) {
-            return false;
-        }
-
-    }
-    private boolean isStoredHotelsFilePresent() {
-        //path to internal storage of app files
-        String path = getFilesDir().getAbsolutePath() + "/stored_hotels";
-        File file = new File(path);
-        return file.exists();
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,14 +42,6 @@ public class MainActivity extends AppCompatActivity {
 
         Hotels_per_Region temp = db.getHotelsOfRegion(37.983810,23.727539);//Athens
         Log.d("Hotel",temp.getHotels());
-
-        if(!isStoredHotelsFilePresent()){
-            Log.d("POUTSAA","File is not! here!");
-            createStoredHotelsFile("{}");
-        }else{
-            Log.d("POUTSAA","File is here!");
-        }
-
 
 
         OkHttpClient client = new OkHttpClient();
