@@ -61,17 +61,22 @@ public class ListOfAreasActivity extends AppCompatActivity {
                         double lng,lat;
 
                         JSONObject userChoice = resources.getJSONObject(i);
+
+                        //Used to pass values from ListOfAreasActivity to MapActivity
+                        Intent intent = new Intent(ListOfAreasActivity.this, MapActivity.class);
                         if (userChoice.has("point")){
                             JSONArray coords = userChoice.getJSONObject("point").getJSONArray("coordinates");
                             lat = coords.getDouble(0);
                             lng = coords.getDouble(1);
-                            //Used to pass values from ListOfAreasActivity to MapActivity
-                            Intent intent = new Intent(ListOfAreasActivity.this, MapActivity.class);
+
                             intent.putExtra("lat", lat);
                             intent.putExtra("lng", lng);
-                            startActivity(intent);
-
                         }
+                        if (userChoice.has("name")) {
+                            String name = userChoice.getString("name");
+                            intent.putExtra("name", name);
+                        }
+                        startActivity(intent);
                     }catch (JSONException e){
                         Log.d("JSON ERROR","Message of fault: "+Log.getStackTraceString(e));
                     }

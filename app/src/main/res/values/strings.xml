@@ -3,4 +3,10 @@
     <string name="hint">Area to search..</string>
     <string name="search">SEARCH</string>
     <string name="hotel_plus_icon_description">Hotel Plus Icon</string>
+
+    <string-array name="measuringUnits">
+        <item>Km</item>
+        <item>Miles</item>
+        <item>Naut Miles</item>
+    </string-array>
 </resources>

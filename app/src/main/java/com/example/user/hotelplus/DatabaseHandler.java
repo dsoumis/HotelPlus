@@ -8,9 +8,6 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
 //https://www.javatpoint.com/android-sqlite-tutorial Studied from here
 
 public class DatabaseHandler extends SQLiteOpenHelper {
@@ -78,7 +75,9 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 new String[]{String.valueOf(given_lat), String.valueOf(given_lat), String.valueOf(given_lng), String.valueOf(given_lng)},
                 null, null, null, null);
         if (cursor != null)
-            cursor.moveToFirst();
+            if (!cursor.moveToFirst()) //If there are no results
+                return null;
+
 
         Hotels_per_Region hotels = new Hotels_per_Region(Integer.parseInt(cursor.getString(0)),
                 Double.parseDouble(cursor.getString(1)), Double.parseDouble(cursor.getString(2)),
