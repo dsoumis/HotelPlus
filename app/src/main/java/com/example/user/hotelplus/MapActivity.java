@@ -3,8 +3,10 @@ package com.example.user.hotelplus;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
@@ -21,6 +23,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.jetbrains.annotations.NotNull;
@@ -28,9 +31,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -197,6 +208,89 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
     }
 
+    private void pointsOfInterestOnMap() {
+        String urlStr = "http://dbpedia.org/sparql?default-graph-uri=http://dbpedia.org&" +
+                "query=select+?thing+?Ftype+?typeName+?long+?lat+" +
+                "where+{+?thing+<http://www.w3.org/2003/01/geo/wgs84_pos%23geometry>+?geo+.+" +
+                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(23.727539,+37.983810),+100))+.+" +
+                "optional+{+" +
+                "?thing+a+?type+.+" +
+                "VALUES+?type+{dbo:Museum}+" +
+                "BIND(+\"Museum\"+as+?typeName+)+}+" +
+                "optional+{+" +
+                "?thing+a+?type+.+" +
+                "VALUES+?type+{dbo:Pyramid}+" +
+                "BIND(+\"Pyramid\"+as+?typeName+)+}+" +
+                "optional+{+" +
+                "?thing+a+?type+.+" +
+                "VALUES+?type+{yago:Skyscraper104233124}+" +
+                "BIND(+\"Skyscraper\"+as+?typeName+)+}+" +
+                "optional+{+" +
+                "?thing+a+?type+.+" +
+                "VALUES+?type+{dbo:Park}+" +
+                "BIND(+\"Park\"+as+?typeName+)+}+" +
+                "optional+{+" +
+                "?thing+a+?type+.+" +
+                "VALUES+?type+{yago:Church103028079}+" +
+                "BIND(+\"Church\"+as+?typeName+)+}+" +
+                "optional+{+" +
+                "?thing+geo:long+?long.+" +
+                "?thing+geo:lat+?lat+}+" +
+                "filter+(BOUND+(?type))+}";
+        Request request = new Request.Builder().url(urlStr).addHeader("Accept", "application/sparql-results+json").build();
+        OkHttpClient client = new OkHttpClient();
+        client = client.newBuilder().retryOnConnectionFailure(true).readTimeout(15, TimeUnit.SECONDS).writeTimeout(15, TimeUnit.SECONDS).
+                callTimeout(15, TimeUnit.SECONDS).build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Log.d("Fault", "Message of fault: " + Log.getStackTraceString(e));
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String result = response.body().string();
+                    Log.d("PuTSA", "Ti[pta " + result);
+
+                    try {
+                        JSONObject jsonResult = new JSONObject(result);
+                        JSONArray results = jsonResult.getJSONObject("results").getJSONArray("bindings");
+                        Log.d("mhkos", "Ti[pta " + results.length());
+                        for (int i = 0; i < results.length(); ++i) {
+                            JSONObject innerObject = results.getJSONObject(i);
+                            Log.d("1prwto", "EDW " + innerObject.getJSONObject("thing").getString("value"));
+                            String attractionName = innerObject.getJSONObject("thing").getString("value");
+                            attractionName = attractionName.substring(attractionName.lastIndexOf("/") + 1);
+                            Log.d("attt", "EDW " + attractionName);
+
+                            final MarkerOptions attraction_marker = new MarkerOptions()
+                                    .position(new LatLng(Double.parseDouble(innerObject.getJSONObject("lat").getString("value")),
+                                            Double.parseDouble(innerObject.getJSONObject("long").getString("value"))));
+                            //.icon(BitmapDescriptorFactory.fromResource(R.drawable.icons8_hotel));
+
+                            attraction_marker.title(attractionName);
+
+                            attraction_marker.snippet(innerObject.getJSONObject("thing").getString("value"));
+
+                            //running on main thread because can not add marker.
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mMap.addMarker(attraction_marker);
+                                }
+                            });
+
+
+                        }
+                    } catch (JSONException e) {
+                        Log.d("JSON ERROR", "Message of fault: " + Log.getStackTraceString(e));
+                    }
+                }
+            }
+        });
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -213,19 +307,32 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
 
         hotelsOnMap();
+        pointsOfInterestOnMap();
 
 
-        LatLng athens = new LatLng(location_lat, location_lng);
+        LatLng region = new LatLng(location_lat, location_lng);
 //        mMap.addMarker(new MarkerOptions().position(athens).title("Marker in Athens").snippet("Population: 4,137,400")
 //                .icon(BitmapDescriptorFactory.fromResource(R.drawable.icons8_hotel)));
 //        mMap.addMarker(new MarkerOptions().position(new LatLng(-34.1, 151)).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(athens, 14.0f));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(region, 14.0f));
+
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                final String website = marker.getSnippet();
+                if (!TextUtils.isEmpty(website)) {
+                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(website));
+                    startActivity(browserIntent);
+                }
+            }
+        });
     }
 
     public void reloadMap(View view) {// Do something in response to button
         EditText radiusT = findViewById(R.id.radiusNum);
         radius = Double.parseDouble(radiusT.getText().toString());
         onResume();
+        pointsOfInterestOnMap();
     }
 
     @Override
@@ -236,6 +343,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             mMap.clear();
 
             hotelsOnMap();
+            pointsOfInterestOnMap();
         }
     }
 }
