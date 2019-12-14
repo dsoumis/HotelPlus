@@ -63,7 +63,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         // Inserting Row
         db.insert(TABLE_HOTELS, null, values);
         //2nd argument is String containing nullColumnHack
-        db.close(); // Closing database connection
+        //db.close(); // Closing database connection
     }
 
     // code to get the hotels of a specific region
@@ -79,12 +79,14 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 return null;
 
 
-        Hotels_per_Region hotels = new Hotels_per_Region(Integer.parseInt(cursor.getString(0)),
+        Hotels_per_Region hotels = new Hotels_per_Region(
+                Integer.parseInt(cursor.getString(0)),
                 Double.parseDouble(cursor.getString(1)), Double.parseDouble(cursor.getString(2)),
                 Double.parseDouble(cursor.getString(3)), Double.parseDouble(cursor.getString(4)),
                 cursor.getString(5));
 
         cursor.close();
+        //db.close();
         return hotels;
     }
 
@@ -101,7 +103,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             cursor.close();
             regionInDb = true;
         }
-
+        //db.close();
         return regionInDb;
     }
 }

@@ -30,6 +30,9 @@
         <activity
             android:name=".MapActivity"
             android:parentActivityName=".ListOfAreasActivity"></activity>
+        <activity
+            android:name=".AboutActivity"
+            android:parentActivityName=".HomeActivity"></activity>
     </application>
 
 </manifest>

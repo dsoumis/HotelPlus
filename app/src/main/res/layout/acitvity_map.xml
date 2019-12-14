@@ -30,10 +30,10 @@
 
     <TextView
         android:id="@+id/textView3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="111dp"
+        android:layout_height="19dp"
         android:layout_marginStart="12dp"
-        android:text="Radius"
+        android:text="Radius of places"
         app:layout_constraintStart_toEndOf="@+id/textView2"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -52,13 +52,13 @@
 
     <Button
         android:id="@+id/reloadButton"
-        android:layout_width="104dp"
-        android:layout_height="40dp"
+        android:layout_width="36dp"
+        android:layout_height="103dp"
         android:onClick="reloadMap"
-        android:text="Reload Map"
+        android:text="Fetch"
         app:layout_constraintBottom_toTopOf="@+id/map"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toEndOf="@+id/measuringUnit"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Spinner
         android:id="@+id/measuringUnit"
@@ -67,6 +67,56 @@
         android:layout_marginTop="16dp"
         app:layout_constraintStart_toEndOf="@+id/radiusNum"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/checkBoxMuseum"
+        android:layout_width="113dp"
+        android:layout_height="16dp"
+        android:text="Museums"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/checkBoxPark"
+        android:layout_width="113dp"
+        android:layout_height="16dp"
+        android:layout_marginTop="24dp"
+        android:text="Parks"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/checkBoxChurch"
+        android:layout_width="113dp"
+        android:layout_height="16dp"
+        android:layout_marginTop="48dp"
+        android:text="Churches"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/checkBoxAll"
+        android:layout_width="113dp"
+        android:layout_height="18dp"
+        android:layout_marginTop="76dp"
+        android:text="All"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <CheckBox
+        android:id="@+id/checkBoxNoHotels"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="No Hotels"
+        android:onClick="onCheckboxClicked"
+        app:layout_constraintBottom_toTopOf="@+id/map"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.539"
+        app:layout_constraintStart_toStartOf="parent" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
