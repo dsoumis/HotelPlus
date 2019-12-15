@@ -16,6 +16,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -137,7 +138,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         //Our database where the regions with hotels are saved
         final DatabaseHandler db = new DatabaseHandler(this);
 
-        Hotels_per_Region temp = db.getHotelsOfRegion(location_lat, location_lng);
+        Hotels_per_Region temp = db.getHotelsOfRegion(location_lat, location_lng, this);
         if (temp != null) {
             hotelsExistInDatabase = true;
             Log.d("Map", temp.getHotels());
@@ -221,7 +222,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         String urlStr = "http://dbpedia.org/sparql?default-graph-uri=http://dbpedia.org&" +
                 "query=select+?thing+?Ftype+?typeName+?long+?lat+" +
                 "where+{+?thing+<http://www.w3.org/2003/01/geo/wgs84_pos%23geometry>+?geo+.+" +
-                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(23.727539,+37.983810),+100))+.+" +
+                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(" + location_lng + "," + location_lat + "),+100))+.+" +
                 "optional+{+" +
                 "?thing+a+?type+.+" +
                 "VALUES+?type+{dbo:Museum}+" +
@@ -248,19 +249,26 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 "filter+(BOUND+(?type))+}";
         Request request = new Request.Builder().url(urlStr).addHeader("Accept", "application/sparql-results+json").build();
         OkHttpClient client = new OkHttpClient();
-        client = client.newBuilder().retryOnConnectionFailure(true).readTimeout(15, TimeUnit.SECONDS).writeTimeout(15, TimeUnit.SECONDS).
-                callTimeout(15, TimeUnit.SECONDS).build();
+        client = client.newBuilder().retryOnConnectionFailure(true).readTimeout(60, TimeUnit.SECONDS).writeTimeout(60, TimeUnit.SECONDS).
+                callTimeout(60, TimeUnit.SECONDS).build();
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
                 Log.d("Fault", "Message of fault: " + Log.getStackTraceString(e));
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "Can not access dbpedia at this time. Please try later.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 if (response.isSuccessful()) {
                     String result = response.body().string();
-                    Log.d("PuTSA", "Ti[pta " + result);
+                    Log.d("map_result", "Ti[pta " + result);
 
                     try {
                         JSONObject jsonResult = new JSONObject(result);
@@ -268,14 +276,18 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                         Log.d("mhkos", "Ti[pta " + results.length());
                         for (int i = 0; i < results.length(); ++i) {
                             JSONObject innerObject = results.getJSONObject(i);
-                            if (innerObject.getJSONObject("typeName").getString("value").equals("Museum") && !showMuseums && !showAll)
-                                continue;
-                            else if (innerObject.getJSONObject("typeName").getString("value").equals("Park") && !showParks && !showAll)
-                                continue;
-                            else if (innerObject.getJSONObject("typeName").getString("value").equals("Church") && !showChurches && !showAll)
-                                continue;
-                            else if (!showMuseums && !showParks && !showChurches && !showAll)
-                                continue;
+                            if (!showAll) {
+                                if (innerObject.getJSONObject("typeName").getString("value").equals("Museum") && !showMuseums)
+                                    continue;
+                                else if (innerObject.getJSONObject("typeName").getString("value").equals("Park") && !showParks)
+                                    continue;
+                                else if (innerObject.getJSONObject("typeName").getString("value").equals("Church") && !showChurches)
+                                    continue;
+                                else if (innerObject.getJSONObject("typeName").getString("value").equals("Skyscraper"))
+                                    continue;
+                                else if (innerObject.getJSONObject("typeName").getString("value").equals("Pyramid"))
+                                    continue;
+                            }
                             Log.d("1prwto", "EDW " + innerObject.getJSONObject("thing").getString("value"));
                             String attractionName = innerObject.getJSONObject("thing").getString("value");
                             attractionName = attractionName.substring(attractionName.lastIndexOf("/") + 1);
@@ -292,6 +304,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                                 attraction_marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.park_icon));
                             else if (innerObject.getJSONObject("typeName").getString("value").equals("Church"))
                                 attraction_marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.church_icon));
+                            else if (innerObject.getJSONObject("typeName").getString("value").equals("Skyscraper"))
+                                attraction_marker.icon(BitmapDescriptorFactory.fromResource(R.drawable.skyscraper_icon));
 
                             attraction_marker.title(attractionName);
 
@@ -348,8 +362,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(Marker marker) {
-                final String website = marker.getSnippet();
+                String website = marker.getSnippet();
                 if (!TextUtils.isEmpty(website)) {
+                    if (!website.contains("http"))
+                        website = "http://" + website;
                     Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(website));
                     startActivity(browserIntent);
                 }

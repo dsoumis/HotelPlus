@@ -32,6 +32,7 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity {
 
     String DB_PATH;
+    String FILES_PATH;
 
     private void copyDataBase() {
         Log.d("Database", "New database is being copied to device!");
@@ -59,6 +60,45 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    private void copyFiles() {
+        Log.d("Files", "New files are being copied to device!");
+        byte[] buffer = new byte[1024];
+        OutputStream myOutput;
+        int length;
+        // Open your local db as the input stream
+        InputStream myInput;
+        String[] list;
+        try {
+            list = getAssets().list("");
+            if (list.length > 0) {
+                // This is a folder
+                for (String file : list) {
+                    if (file.equals("images") || file.equals("hotelsManager") || file.equals("webkit"))
+                        continue;
+                    Log.d("asset", file);
+                    myInput = getAssets().open(file);
+                    // transfer bytes from the inputfile to the
+                    // outputfile
+                    myOutput = new FileOutputStream(FILES_PATH + "/" + file);
+                    while ((length = myInput.read(buffer)) > 0) {
+                        myOutput.write(buffer, 0, length);
+                    }
+                    myOutput.close();
+                    myOutput.flush();
+                    myInput.close();
+                }
+            } else
+                Log.d("asset", "nothing");
+        } catch (IOException e) {
+            Log.d("copy_exception", "Message of fault: " + Log.getStackTraceString(e));
+        }
+
+        Log.d("Files",
+                "New files have been copied to device!");
+
+
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,19 +113,22 @@ public class MainActivity extends AppCompatActivity {
 
         OkHttpClient client = new OkHttpClient();
         client = client.newBuilder().retryOnConnectionFailure(true)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(60, TimeUnit.SECONDS).build();
+                .readTimeout(180, TimeUnit.SECONDS)
+                .connectTimeout(180, TimeUnit.SECONDS)
+                .writeTimeout(180, TimeUnit.SECONDS)
+                .callTimeout(180, TimeUnit.SECONDS).build();
 
         List<String> Countries_bbox = new ArrayList<String>();
         //Countries_bbox.add("34.9199876979,20.1500159034,41.8269046087,26.6041955909"); //Greece
-        //Countries_bbox.add("47.2701114,5.8663153,55.099161,15.0419319"); //Germany
+        Countries_bbox.add("47.2701114,5.8663153,55.099161,15.0419319"); //Germany
 
-        DB_PATH = getDatabasePath("hotelsManager").getPath();
-        copyDataBase();
-        BBoxes b = new BBoxes();
-        Countries_bbox = b.getCountries_bboxes();
+
+//        DB_PATH = getDatabasePath("hotelsManager").getPath();
+//        copyDataBase();
+//        FILES_PATH = getFilesDir().getPath();
+//        copyFiles();
+//        BBoxes b = new BBoxes();
+//        Countries_bbox = b.getCountries_bboxes();
 
 
         //String Greece_bbox = "34.9199876979,20.1500159034,41.8269046087,26.6041955909";
@@ -95,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         pb = findViewById(R.id.progress);
         pb.setVisibility(View.VISIBLE);
         int i = 0;
-        for (String bbox : Countries_bbox) {
+        for (final String bbox : Countries_bbox) {
             String urlStr = "http://overpass-api.de/api/interpreter?data=[out:json];(node[tourism=hotel] (" + bbox +
                     "););out body;";
 
@@ -124,24 +167,25 @@ public class MainActivity extends AppCompatActivity {
                 public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                     if (response.isSuccessful()) {
                         String result = response.body().string();
-                        Log.d("PiTSA", "Ti[pta " + result);
-                        if (!db.regionExists(min_lat, min_lng, max_lat, max_lng)) {
-                            Log.d("Here", "mpainei");
-                            db.addRegionWithHotels(new Hotels_per_Region(min_lat, min_lng, max_lat, max_lng, result));
-                        } else {
-                            Log.d("Here", "already");
-                        }
+                        Log.d("overpass_result", "Ti[pta " + result);
+
+                        FileOutputStream fileOutputStream = openFileOutput(bbox, MODE_PRIVATE);
+                        fileOutputStream.write(result.getBytes());
+                        fileOutputStream.close();
+
+                        db.addRegionWithHotels(new Hotels_per_Region(min_lat, min_lng, max_lat, max_lng, bbox));
+
                         try {
 
                             JSONObject jsonResult = new JSONObject(result);
                             JSONArray results = jsonResult.getJSONArray("elements");
-                            Log.d("PoTSA", String.valueOf(results.length()));
+                            Log.d("overpass_result_length", String.valueOf(results.length()));
 
                         } catch (JSONException e) {
                             Log.d("JSON ERROR", "Message of fault: " + Log.getStackTraceString(e));
                         }
                     } else {
-                        Log.d("PiTSA", "Ti[pta " + response);
+                        Log.d("overpass_result", "Ti[pta " + response);
                     }
                 }
             });

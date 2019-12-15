@@ -8,6 +8,11 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 //https://www.javatpoint.com/android-sqlite-tutorial Studied from here
 
 public class DatabaseHandler extends SQLiteOpenHelper {
@@ -67,23 +72,37 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     }
 
     // code to get the hotels of a specific region
-    Hotels_per_Region getHotelsOfRegion(double given_lat, double given_lng) {
+    Hotels_per_Region getHotelsOfRegion(double given_lat, double given_lng, Context context) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(TABLE_HOTELS, new String[]{KEY_ID, KEY_MIN_LAT, KEY_MIN_LNG, KEY_MAX_LAT, KEY_MAX_LNG, KEY_ARRAY},
                 KEY_MIN_LAT + "<=? AND " + KEY_MAX_LAT + ">=? AND " + KEY_MIN_LNG + "<=? AND " + KEY_MAX_LNG + ">=?",
                 new String[]{String.valueOf(given_lat), String.valueOf(given_lat), String.valueOf(given_lng), String.valueOf(given_lng)},
                 null, null, null, null);
+
         if (cursor != null)
             if (!cursor.moveToFirst()) //If there are no results
                 return null;
 
+        FileInputStream fileInputStream;
+        StringBuilder stringBuilder = null;
+        try {
+            fileInputStream = context.openFileInput(cursor.getString(5));
+            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            stringBuilder = new StringBuilder();
+            String text;
+            while ((text = bufferedReader.readLine()) != null)
+                stringBuilder.append(text).append("\n");
+            fileInputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         Hotels_per_Region hotels = new Hotels_per_Region(
                 Integer.parseInt(cursor.getString(0)),
                 Double.parseDouble(cursor.getString(1)), Double.parseDouble(cursor.getString(2)),
                 Double.parseDouble(cursor.getString(3)), Double.parseDouble(cursor.getString(4)),
-                cursor.getString(5));
+                stringBuilder.toString());
 
         cursor.close();
         //db.close();
