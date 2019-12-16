@@ -107,15 +107,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <CheckBox
-        android:id="@+id/checkBoxNoHotels"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="No Hotels"
-        android:onClick="onCheckboxClicked"
+    <Button
+        android:id="@+id/buttonReloadHotels"
+        android:layout_width="137dp"
+        android:layout_height="35dp"
+        android:onClick="reloadHotels"
+        android:text="Reload Hotels"
         app:layout_constraintBottom_toTopOf="@+id/map"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.539"
+        app:layout_constraintHorizontal_bias="0.478"
         app:layout_constraintStart_toStartOf="parent" />
 
 

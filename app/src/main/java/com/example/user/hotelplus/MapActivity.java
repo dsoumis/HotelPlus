@@ -35,6 +35,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import androidx.core.app.ActivityCompat;
@@ -53,19 +57,22 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private int LOCATION_PERMISSION_CODE = 1;
 
     private double location_lat, location_lng;
+    private MarkerOptions clicked_hotel;
+    private Map<String, List<Double>> hotels_coords;
 
     private boolean hotelsExistInDatabase = false;
     private JSONArray hotels;
     private double radius;
     private String measuringUnit = "K";
 
-    private boolean showMuseums = false, showParks = false, showChurches = false, showAll = false, showHotels = true;
+    private boolean showMuseums = false, showParks = false, showChurches = false, showAll = false, oneHotel = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.acitvity_map);
 
+        hotels_coords = new HashMap<>();
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -192,7 +199,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if (hotelsExistInDatabase) {
                 for (int i = 0; i < hotels.length(); ++i) {
                     JSONObject hotel_info = hotels.getJSONObject(i);
-
+                    //Log.d("hotel_info",""+hotel_info);
                     //Don't show the hotels that are more far than a specific radius from current region
                     if (distance(location_lat, location_lng,
                             Double.parseDouble(hotel_info.getString("lat")), Double.parseDouble(hotel_info.getString("lon")),
@@ -203,8 +210,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     MarkerOptions hotel_marker = new MarkerOptions()
                             .position(new LatLng(Double.parseDouble(hotel_info.getString("lat")), Double.parseDouble(hotel_info.getString("lon"))))
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
-                    if (hotel_info.getJSONObject("tags").has("name"))
+                    if (hotel_info.getJSONObject("tags").has("name")) {
                         hotel_marker.title(hotel_info.getJSONObject("tags").getString("name"));
+                        List<Double> temp = new ArrayList<>();
+                        temp.add(Double.parseDouble(hotel_info.getString("lat")));
+                        temp.add(Double.parseDouble(hotel_info.getString("lon")));
+                        hotels_coords.put(hotel_info.getJSONObject("tags").getString("name"), temp);
+                    }
                     else
                         hotel_marker.title("Name is not provided");
                     if (hotel_info.getJSONObject("tags").has("website"))
@@ -347,8 +359,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             requestLocationPermission();
         }
 
-        hotelsOnMap();
-        pointsOfInterestOnMap();
+        //hotelsOnMap();
+        //pointsOfInterestOnMap();
 
 
         LatLng region = new LatLng(location_lat, location_lng);
@@ -357,11 +369,34 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 //        mMap.addMarker(new MarkerOptions().position(new LatLng(-34.1, 151)).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(region, 14.0f));
 
-
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                String hotel_name = marker.getTitle();
+                String website = marker.getSnippet();
+                List<Double> temp = hotels_coords.get(hotel_name);
+                if (temp == null) {
+                    return false;
+                }
+                MarkerOptions hotel_marker = new MarkerOptions()
+                        .position(new LatLng(temp.get(0), temp.get(1)))
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
+                hotel_marker.title(hotel_name);
+                hotel_marker.snippet(website);
+                clicked_hotel = hotel_marker;
+                mMap.clear();
+                mMap.addMarker(hotel_marker);
+                pointsOfInterestOnMap();
+                oneHotel = true;
+                mMap.setOnMarkerClickListener(null);
+                return true;
+            }
+        });
         //Go to website of the marker if provided.
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(Marker marker) {
+                String hotel_name = marker.getTitle();
                 String website = marker.getSnippet();
                 if (!TextUtils.isEmpty(website)) {
                     if (!website.contains("http"))
@@ -371,23 +406,53 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 }
             }
         });
+
+
     }
 
-    public void reloadMap(View view) {// Do something in response to button
+    public void reloadMap(View view) {// Do in response to fetch button
         EditText radiusT = findViewById(R.id.radiusNum);
         radius = Double.parseDouble(radiusT.getText().toString());
         onResume();
-        pointsOfInterestOnMap();
+        //pointsOfInterestOnMap();
     }
 
+    public void reloadHotels(View view) {// Do in response to reload hotels button
+        oneHotel = false;
+        hotelsOnMap();
+        mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                String hotel_name = marker.getTitle();
+                String website = marker.getSnippet();
+                List<Double> temp = hotels_coords.get(hotel_name);
+                if (temp == null) {
+                    return false;
+                }
+                MarkerOptions hotel_marker = new MarkerOptions()
+                        .position(new LatLng(temp.get(0), temp.get(1)))
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
+                hotel_marker.title(hotel_name);
+                hotel_marker.snippet(website);
+                mMap.clear();
+                mMap.addMarker(hotel_marker);
+                pointsOfInterestOnMap();
+                oneHotel = true;
+                mMap.setOnMarkerClickListener(null);
+                return true;
+            }
+        });
+    }
     @Override
     public void onResume() {
         super.onResume();
 
         if (mMap != null) { //prevent crashing if the map doesn't exist yet (eg. on starting activity)
             mMap.clear();
-            if (showHotels)
+            if (!oneHotel)
                 hotelsOnMap();
+            else
+                mMap.addMarker(clicked_hotel);
             pointsOfInterestOnMap();
         }
     }
@@ -409,9 +474,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 break;
             case R.id.checkBoxAll:
                 showAll = checked;
-                break;
-            case R.id.checkBoxNoHotels:
-                showHotels = !checked;
                 break;
         }
     }
