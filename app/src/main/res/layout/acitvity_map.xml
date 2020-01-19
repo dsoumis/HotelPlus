@@ -33,7 +33,7 @@
         android:layout_width="111dp"
         android:layout_height="19dp"
         android:layout_marginStart="12dp"
-        android:text="Radius of places"
+        android:text="Radius of hotels"
         app:layout_constraintStart_toEndOf="@+id/textView2"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -58,7 +58,8 @@
         android:text="Fetch"
         app:layout_constraintBottom_toTopOf="@+id/map"
         app:layout_constraintStart_toEndOf="@+id/measuringUnit"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
 
     <Spinner
         android:id="@+id/measuringUnit"
@@ -75,7 +76,8 @@
         android:text="Museums"
         android:onClick="onCheckboxClicked"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
 
     <CheckBox
         android:id="@+id/checkBoxPark"
@@ -85,7 +87,8 @@
         android:text="Parks"
         android:onClick="onCheckboxClicked"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
 
     <CheckBox
         android:id="@+id/checkBoxChurch"
@@ -95,7 +98,8 @@
         android:text="Churches"
         android:onClick="onCheckboxClicked"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
 
     <CheckBox
         android:id="@+id/checkBoxAll"
@@ -105,7 +109,8 @@
         android:text="All"
         android:onClick="onCheckboxClicked"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone" />
 
     <Button
         android:id="@+id/buttonReloadHotels"
@@ -116,7 +121,8 @@
         app:layout_constraintBottom_toTopOf="@+id/map"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.478"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        android:visibility="gone" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

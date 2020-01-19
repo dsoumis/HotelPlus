@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -36,9 +37,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import androidx.core.app.ActivityCompat;
@@ -58,7 +57,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     private double location_lat, location_lng;
     private MarkerOptions clicked_hotel;
-    private Map<String, List<Double>> hotels_coords;
 
     private boolean hotelsExistInDatabase = false;
     private JSONArray hotels;
@@ -72,7 +70,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.acitvity_map);
 
-        hotels_coords = new HashMap<>();
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -83,6 +80,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         TextView area = findViewById(R.id.textView2);
         area.setText(listofareas_intent.getStringExtra("name"));
+
+//        TextView radiusText = findViewById(R.id.textView3);
+//        String radius_of = "Radius of hotels";
+//        radiusText.setText(radius_of);
 
         EditText radiusT = findViewById(R.id.radiusNum);
         radiusT.setText("5");
@@ -212,10 +213,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
                     if (hotel_info.getJSONObject("tags").has("name")) {
                         hotel_marker.title(hotel_info.getJSONObject("tags").getString("name"));
-                        List<Double> temp = new ArrayList<>();
-                        temp.add(Double.parseDouble(hotel_info.getString("lat")));
-                        temp.add(Double.parseDouble(hotel_info.getString("lon")));
-                        hotels_coords.put(hotel_info.getJSONObject("tags").getString("name"), temp);
                     }
                     else
                         hotel_marker.title("Name is not provided");
@@ -234,7 +231,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         String urlStr = "http://dbpedia.org/sparql?default-graph-uri=http://dbpedia.org&" +
                 "query=select+?thing+?Ftype+?typeName+?long+?lat+" +
                 "where+{+?thing+<http://www.w3.org/2003/01/geo/wgs84_pos%23geometry>+?geo+.+" +
-                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(" + location_lng + "," + location_lat + "),+100))+.+" +
+                "FILTER+(<bif:st_intersects>+(?geo,+<bif:st_point>+(" + clicked_hotel.getPosition().longitude + "," + clicked_hotel.getPosition().latitude + "),+" + radius + "))+.+" +
                 "optional+{+" +
                 "?thing+a+?type+.+" +
                 "VALUES+?type+{dbo:Museum}+" +
@@ -374,10 +371,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             public boolean onMarkerClick(Marker marker) {
                 String hotel_name = marker.getTitle();
                 String website = marker.getSnippet();
-                List<Double> temp = hotels_coords.get(hotel_name);
-                if (temp == null) {
-                    return false;
-                }
+                List<Double> temp;
+                LatLng position = marker.getPosition();
+                temp = new ArrayList<>();
+                temp.add(position.latitude);
+                temp.add(position.longitude);
+
                 MarkerOptions hotel_marker = new MarkerOptions()
                         .position(new LatLng(temp.get(0), temp.get(1)))
                         .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
@@ -388,10 +387,28 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 mMap.addMarker(hotel_marker);
                 pointsOfInterestOnMap();
                 oneHotel = true;
+
+
+                TextView radiusText = findViewById(R.id.textView3);
+                String radius_of = "Radius of places";
+                radiusText.setText(radius_of);
+
+
+                Button reload_hotels_btn = findViewById(R.id.buttonReloadHotels);
+                reload_hotels_btn.setVisibility(View.VISIBLE);
+
+                findViewById(R.id.checkBoxMuseum).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxPark).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxChurch).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxAll).setVisibility(View.VISIBLE);
+                findViewById(R.id.reloadButton).setVisibility(View.VISIBLE);
+
+
                 mMap.setOnMarkerClickListener(null);
-                return true;
+                return false;
             }
         });
+
         //Go to website of the marker if provided.
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
@@ -418,6 +435,21 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     }
 
     public void reloadHotels(View view) {// Do in response to reload hotels button
+        mMap.clear();
+        clicked_hotel = null;
+        TextView radiusText = findViewById(R.id.textView3);
+        String radius_of = "Radius of hotels";
+        radiusText.setText(radius_of);
+
+        Button reload_hotels_btn = findViewById(R.id.buttonReloadHotels);
+        reload_hotels_btn.setVisibility(View.GONE);
+
+        findViewById(R.id.checkBoxMuseum).setVisibility(View.GONE);
+        findViewById(R.id.checkBoxPark).setVisibility(View.GONE);
+        findViewById(R.id.checkBoxChurch).setVisibility(View.GONE);
+        findViewById(R.id.checkBoxAll).setVisibility(View.GONE);
+        findViewById(R.id.reloadButton).setVisibility(View.GONE);
+
         oneHotel = false;
         hotelsOnMap();
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
@@ -425,21 +457,40 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             public boolean onMarkerClick(Marker marker) {
                 String hotel_name = marker.getTitle();
                 String website = marker.getSnippet();
-                List<Double> temp = hotels_coords.get(hotel_name);
-                if (temp == null) {
-                    return false;
-                }
+                List<Double> temp;
+                LatLng position = marker.getPosition();
+                temp = new ArrayList<>();
+                temp.add(position.latitude);
+                temp.add(position.longitude);
+
                 MarkerOptions hotel_marker = new MarkerOptions()
                         .position(new LatLng(temp.get(0), temp.get(1)))
                         .icon(BitmapDescriptorFactory.fromResource(R.drawable.hotel_icon));
                 hotel_marker.title(hotel_name);
                 hotel_marker.snippet(website);
+                clicked_hotel = hotel_marker;
                 mMap.clear();
                 mMap.addMarker(hotel_marker);
                 pointsOfInterestOnMap();
                 oneHotel = true;
+
+
+                TextView radiusText = findViewById(R.id.textView3);
+                String radius_of = "Radius of places";
+                radiusText.setText(radius_of);
+
+                Button reload_hotels_btn = findViewById(R.id.buttonReloadHotels);
+                reload_hotels_btn.setVisibility(View.VISIBLE);
+
+                findViewById(R.id.checkBoxMuseum).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxPark).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxChurch).setVisibility(View.VISIBLE);
+                findViewById(R.id.checkBoxAll).setVisibility(View.VISIBLE);
+                findViewById(R.id.reloadButton).setVisibility(View.VISIBLE);
+
+
                 mMap.setOnMarkerClickListener(null);
-                return true;
+                return false;
             }
         });
     }
@@ -453,7 +504,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 hotelsOnMap();
             else
                 mMap.addMarker(clicked_hotel);
-            pointsOfInterestOnMap();
+            if (clicked_hotel != null)
+                pointsOfInterestOnMap();
         }
     }
 

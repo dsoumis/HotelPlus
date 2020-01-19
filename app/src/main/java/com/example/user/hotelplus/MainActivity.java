@@ -131,7 +131,6 @@ public class MainActivity extends AppCompatActivity {
 //        Countries_bbox = b.getCountries_bboxes();
 
 
-        //String Greece_bbox = "34.9199876979,20.1500159034,41.8269046087,26.6041955909";
 
 
         ProgressBar pb;
